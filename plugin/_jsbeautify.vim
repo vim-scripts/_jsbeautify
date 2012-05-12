@@ -1,7 +1,7 @@
-if &cp || exists("loaded_jsbeautify")
+if &cp || exists("loaded__jsbeautify")
     finish
 endif
-let loaded_jsbeautify = 3
+let loaded__jsbeautify = 3
 
 
 

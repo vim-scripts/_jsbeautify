@@ -51,6 +51,14 @@ function! s:unindent()
 	endif
 endfunction
 
+function! s:deindent(num)
+	let index = 0
+	while index < a:num
+		let index += 1
+		let s:indent_level -= 1
+	endwhile
+endfunction
+
 function! s:remove_indent()
 	if len(s:output)>0 && s:output[len(s:output) -1] == s:indent_string
 		call remove(s:output, -1)
@@ -365,6 +373,9 @@ function! g:_Jsbeautify()
 
 				if s:last_word == "do"
 					call s:set_mode("DO_BLOCK")
+				"elseif s:last_word == "switch"
+				" CAN NOT WORK ...
+				"	call s:set_mode("SWITCH_BLOCK") 
 				else
 					call s:set_mode("BLOCK")
 				endif
@@ -381,6 +392,11 @@ function! g:_Jsbeautify()
 				if s:last_type == "TK_START_BLOCK"
 					call s:remove_indent()
 					call s:unindent()
+				elseif s:current_mode == "SWITCH_BLOCK"
+					call s:deindent(2)
+					"call s:unindent()
+					"call s:unindent()
+					call s:print_newline(1)
 				else
 					call s:unindent()
 					call s:print_newline(1)
@@ -398,11 +414,19 @@ function! g:_Jsbeautify()
 					throw "jump out"
 				endif
 				if s:token_text == "case" || s:token_text == "default"
+					if s:current_mode == "BLOCK" 
+						let s:current_mode = remove(s:modes, -1)
+						call s:set_mode("SWITCH_BLOCK")
+					endif
 					if s:last_text == ":"
 						"switch cases following one another
 						call s:remove_indent()
+					elseif s:last_text == "{"
+						" case statement starts in the line after switch
+						call s:print_newline(1)
+						call s:indent()
 					else
-						" case statement starts in the same line where switch
+						" case statement starts in the same line where first case
 						call s:unindent()
 						call s:print_newline(1)
 						call s:indent()
@@ -423,7 +447,7 @@ function! g:_Jsbeautify()
 					endif
 				elseif s:last_type == "TK_SEMICOLON" && (s:current_mode == "BLOCK" || s:current_mode == "DO_BLOCK")
 					let s:prefix = "NEWLINE"
-				elseif s:last_type == "TK_SEMICOLON" && s:current_mode == "EXPRESSION"
+				elseif s:last_type == "TK_SEMICOLON" && (s:current_mode == "EXPRESSION")
 					let s:prefix = "SPACE"
 				elseif s:last_type == "TK_STRING"
 					let s:prefix = "NEWLINE"
@@ -483,7 +507,7 @@ function! g:_Jsbeautify()
 				let s:var_line = 0
 			
 			elseif s:token_type == "TK_STRING"
-				if s:last_type == "TK_START_BLOCK" || s:last_type == "TK_END_BLOCK" || s:last_type == "TK_SEMICOLON"
+				if s:last_type == "TK_START_BLOCK" || s:last_type == "TK_END_BLOCK" || (s:last_type == "TK_SEMICOLON")
 					call s:print_newline(1)
 				elseif s:last_type == "TK_WORD"
 					call s:print_space()
@@ -539,7 +563,7 @@ function! g:_Jsbeautify()
 							call s:print_token()
 							"call s:print_newline(1)
 						else
-							" EXPR od DO_BLOCK
+							" EXPR od DO_BLOCK or SWITCH_BLOCK
 							call s:print_token()
 							call s:print_space()
 						endif

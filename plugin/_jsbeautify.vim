@@ -1,17 +1,17 @@
 if &cp || exists("loaded__jsbeautify")
     finish
 endif
-let loaded__jsbeautify = 3
+let loaded__jsbeautify = 2.2
 
 
 
-function! s:trim_output()
+function! s:trim_output() " if the last item of output(stringArray) is empty string or indnet string, remove it.
 	while len(s:output) > 0 && (s:output[len(s:output)-1] == " " || s:output[len(s:output)-1] == s:indent_string)
 		call remove(s:output, -1)
 	endwhile
 endfunction
 
-function! s:print_newline(ignore_repeated) 
+function! s:print_newline(ignore_repeated) " if it's not the first line, or violate the ignore repeated rule, then create a new line with reseting flags.
 	let s:if_line_flag = 0
 	call s:trim_output()
 	if len(s:output)==0
@@ -27,7 +27,7 @@ function! s:print_newline(ignore_repeated)
 	endwhile
 endfunction
 
-function! s:print_space()
+function! s:print_space() "if last output is not \n or indent string, add space.
 	let last_output = " "
 	if len(s:output) > 0
 		let last_output = s:output[len(s:output) - 1]
@@ -37,15 +37,15 @@ function! s:print_space()
 	endif
 endfunction
 
-function! s:print_token()
+function! s:print_token() " add next word into the array of output string.
 	call add(s:output, s:token_text)
-endfunctio
+endfunction
 
-function! s:indent()
+function! s:indent() " increase indent level record.
 	let s:indent_level += 1
 endfunction
 
-function! s:unindent()
+function! s:unindent() " decrease indent level record.
 	if s:indent_level
 		let s:indent_level -= 1
 	endif
@@ -59,18 +59,18 @@ function! s:deindent(num)
 	endwhile
 endfunction
 
-function! s:remove_indent()
+function! s:remove_indent() " if the last item of output (stringArray) is indent string, remove it.
 	if len(s:output)>0 && s:output[len(s:output) -1] == s:indent_string
 		call remove(s:output, -1)
 	endif
 endfunction
 
-function! s:set_mode(mode)
+function! s:set_mode(mode) " push last mode into modes and update current mode.
 	call add(s:modes, s:current_mode)
 	let s:current_mode = a:mode
 endfunction
 
-function! s:restore_mode()
+function! s:restore_mode() " pull last mode out from modes, and set last mode tobe current mode.
 	if s:current_mode == "DO_BLOCK"
 		let s:do_block_just_closed = 1
 	else
@@ -79,11 +79,11 @@ function! s:restore_mode()
 	let s:current_mode = remove(s:modes, -1)
 endfunction
 
-function! s:in_array(what, arr)
+function! s:in_array(what, arr) " check if the first argument is in the second argument(supposed to be an array).
 	return index(a:arr, a:what) != -1
 endfunction
 
-function! s:get_next_token()
+function! s:get_next_token() " return next array of string and type. the string can be a word , a smybol and a comment.
 	let n_newlines = 0
 
 	if s:parser_pos >= len(s:input)
@@ -94,12 +94,12 @@ function! s:get_next_token()
 	let s:parser_pos += 1
 
 	while s:in_array(c, s:whitespace) 
-		if s:parser_pos >= len(s:input)
-			return ["", "TK_EOF"]
-		endif
-
 		if c == "\n"
 			let n_newlines += 1
+		endif
+
+		if s:parser_pos >= len(s:input)
+			return ["", "TK_EOF"]
 		endif
 
 		let c = s:input[s:parser_pos]
@@ -108,7 +108,7 @@ function! s:get_next_token()
 
 	let wanted_newline = 0
 	
-	if s:opt_preserve_newlines
+	if s:opt_preserve_newlines " apply adding new line if needed and possible.
 		if n_newlines > 1
 			for i in [0, 1] 
 				call s:print_newline(i==0)
@@ -119,7 +119,7 @@ function! s:get_next_token()
 
 	if s:in_array(c, s:wordchar)
 		if s:parser_pos < len(s:input)
-			while s:in_array(s:input[s:parser_pos], s:wordchar)
+			while s:in_array(s:input[s:parser_pos], s:wordchar) " get next word
 				let c .= s:input[s:parser_pos]
 				let s:parser_pos += 1
 				if s:parser_pos == len(s:input)
@@ -200,7 +200,7 @@ function! s:get_next_token()
 		endif
 	endif
 
-	if c == "'" || c =='"' || (c == "/" && ((s:last_type == "TK_WORD" && s:last_text == "return") || (s:last_type == "TK_START_EXPR" || s:last_type == "TK_START_BLOCK" || s:last_type == "TK_END_BLOCK" || s:last_type == "TK_OPERATOR" || s:last_type == "TK_EOF" || s:last_type == "TK_SEMICOLON")))
+	if c == "'" || c =='"' || (c == "/" && ((s:last_type == "TK_WORD" && s:last_text == "return") || (s:last_type == "TK_START_EXPR" || s:last_type == "TK_START_BLOCK" || s:last_type == "TK_END_BLOCK" || s:last_type == "TK_OPERATOR" || s:last_type == "TK_EOF" || s:last_type == "TK_SEMICOLON"))) " get next string's string
 		let sep = c
 		let esc = 0
 		let resulting_string = c
@@ -447,7 +447,7 @@ function! g:_Jsbeautify()
 					endif
 				elseif s:last_type == "TK_SEMICOLON" && (s:current_mode == "BLOCK" || s:current_mode == "DO_BLOCK")
 					let s:prefix = "NEWLINE"
-				elseif s:last_type == "TK_SEMICOLON" && (s:current_mode == "EXPRESSION")
+				elseif s:last_type == "TK_SEMICOLON" && s:current_mode == "EXPRESSION"
 					let s:prefix = "SPACE"
 				elseif s:last_type == "TK_STRING"
 					let s:prefix = "NEWLINE"
@@ -507,7 +507,7 @@ function! g:_Jsbeautify()
 				let s:var_line = 0
 			
 			elseif s:token_type == "TK_STRING"
-				if s:last_type == "TK_START_BLOCK" || s:last_type == "TK_END_BLOCK" || (s:last_type == "TK_SEMICOLON")
+				if s:last_type == "TK_START_BLOCK" || s:last_type == "TK_END_BLOCK" || s:last_type == "TK_SEMICOLON"
 					call s:print_newline(1)
 				elseif s:last_type == "TK_WORD"
 					call s:print_space()
